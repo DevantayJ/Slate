@@ -576,6 +576,9 @@ function renderDetail(inv) {
       <button class="btn btn-outline btn-sm" onclick="downloadPDF(${inv.id})">PDF</button>
     </div>
     ${inv.status === 'paid' ? `<p style="color:var(--green);text-align:center;margin-top:12px;font-size:14px">✓ Paid ${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('en-GB') : ''}</p>` : ''}
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+      <button class="btn btn-danger btn-sm" onclick="deleteInvoice(${inv.id})">Delete Invoice</button>
+    </div>
   `;
 }
 
@@ -595,6 +598,14 @@ async function markPaid(id) {
 
 function downloadPDF(id) {
   window.open(`/api/invoices/${id}/pdf`, '_blank');
+}
+
+async function deleteInvoice(id) {
+  if (!confirm('Delete this invoice? This cannot be undone.')) return;
+  await del(`/api/invoices/${id}`);
+  toast('Invoice deleted');
+  showPage('invoices', null);
+  loadInvoices();
 }
 
 // ── New Invoice ───────────────────────────────────────────────
