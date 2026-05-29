@@ -40,28 +40,34 @@ def send_invoice_email(
         subject=f"Invoice #{invoice_number} — {business_name}",
         html_content=f"""
         <div style="font-family:Arial,sans-serif;background:#000;color:#fff;padding:40px;max-width:600px;margin:0 auto;">
-          <h2 style="letter-spacing:4px;font-weight:300;font-size:13px;color:#aaa;text-transform:uppercase;">LOVE AND ESCAPISM</h2>
+          <h2 style="letter-spacing:4px;font-weight:300;font-size:13px;color:#aaa;text-transform:uppercase;">{business_name}</h2>
           <hr style="border:none;border-top:1px solid #333;margin:16px 0 32px;">
-          <p style="font-size:15px;">Hi {client_name},</p>
-          <p style="color:#ccc;line-height:1.7;">
-            Please find your invoice attached for the services provided. A summary is below.
+          <p style="font-size:15px;margin-bottom:16px;">Hi {client_name},</p>
+          <p style="color:#ccc;line-height:1.8;margin-bottom:16px;">
+            It was a pleasure working with you — thank you for having me. Please find your invoice attached.
+            I've included a summary below for easy reference.
           </p>
           <div style="background:#1a1a1a;border-radius:8px;padding:24px;margin:24px 0;">
-            <p style="margin:0 0 8px;color:#aaa;font-size:12px;letter-spacing:2px;">INVOICE #{invoice_number}</p>
-            <p style="margin:0 0 8px;font-size:22px;font-weight:bold;">{total}</p>
-            <p style="margin:0;color:#aaa;font-size:13px;">Payment due: {due_date}</p>
+            <p style="margin:0 0 6px;color:#aaa;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Invoice #{invoice_number}</p>
+            <p style="margin:0 0 12px;font-size:26px;font-weight:bold;">{total}</p>
+            <p style="margin:0;color:#aaa;font-size:13px;">Payment due: <span style="color:#fff">{due_date}</span></p>
           </div>
-          <p style="color:#ccc;line-height:1.7;">
-            By paying this invoice you confirm that you have read and accepted the terms and conditions
-            included on page 2 of the attached PDF.
+          <p style="color:#ccc;line-height:1.8;margin-bottom:16px;">
+            Payment can be made via bank transfer using the details on the invoice.
+            Once received, I'll send over a confirmation straight away.
           </p>
-          <p style="color:#ccc;line-height:1.7;">
-            If you have any questions, don't hesitate to reach out.
+          <p style="color:#ccc;line-height:1.8;margin-bottom:16px;">
+            Please note that by making payment you confirm you've read and agreed to the terms and conditions
+            on page 2 of the attached PDF.
           </p>
-          <p style="margin-top:32px;">Kind regards,<br><strong>{owner_name}</strong><br>
+          <p style="color:#ccc;line-height:1.8;">
+            If you have any questions at all, feel free to reply to this email — I'm always happy to help.
+          </p>
+          <p style="margin-top:36px;line-height:1.8;">Warm regards,<br>
+          <strong style="font-size:16px;">{owner_name}</strong><br>
           <span style="color:#aaa;font-size:12px;">{business_name}</span></p>
-          <hr style="border:none;border-top:1px solid #333;margin:32px 0 16px;">
-          <p style="color:#555;font-size:11px;text-align:center;letter-spacing:2px;">L O V E  A N D  E S C A P I S M</p>
+          <hr style="border:none;border-top:1px solid #222;margin:36px 0 16px;">
+          <p style="color:#444;font-size:11px;text-align:center;letter-spacing:3px;">L O V E  A N D  E S C A P I S M</p>
         </div>
         """,
     )
