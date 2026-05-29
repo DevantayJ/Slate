@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Slate</title>
+<link rel="manifest" href="/static/manifest.json">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  :root{
+    --bg:#000;--surface:#111;--surface2:#1a1a1a;--border:#2a2a2a;
+    --text:#fff;--muted:#888;--accent:#fff;
+    --green:#4caf50;--red:#f44336;--amber:#ff9800;--blue:#2196f3;
+    --radius:12px;--nav-h:64px;
+  }
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;overscroll-behavior:none}
+  #app{display:flex;flex-direction:column;height:100%}
+  .page{display:none;flex:1;overflow-y:auto;padding:16px 16px calc(var(--nav-h) + 16px)}
+  .page.active{display:block}
+
+  /* NAV */
+  nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+  nav button{background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;letter-spacing:1px;cursor:pointer;padding:8px 12px;border-radius:8px;transition:color .2s}
+  nav button.active{color:var(--text)}
+  nav button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .fab{width:52px;height:52px;background:var(--text);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;box-shadow:0 4px 20px rgba(255,255,255,.15);transition:transform .15s}
+  .fab:active{transform:scale(.93)}
+  .fab svg{stroke:#000;width:24px;height:24px;fill:none;stroke-width:2.5;stroke-linecap:round}
+
+  /* HEADER */
+  .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-top:8px}
+  .page-title{font-size:22px;font-weight:700;letter-spacing:-0.5px}
+  .brand{font-size:11px;letter-spacing:4px;color:var(--muted);font-weight:400;text-transform:uppercase}
+
+  /* CARDS */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+  .card:last-child{margin-bottom:0}
+  .card-row{display:flex;justify-content:space-between;align-items:center}
+  .card-label{font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:4px}
+  .card-val{font-size:24px;font-weight:700}
+  .card-sub{font-size:12px;color:var(--muted);margin-top:4px}
+
+  /* STAT GRID */
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+
+  /* STATUS BADGES */
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+  .badge-draft{background:#222;color:#888}
+  .badge-sent{background:#0d2a4a;color:var(--blue)}
+  .badge-opened{background:#2a1f00;color:var(--amber)}
+  .badge-paid{background:#0a2a0a;color:var(--green)}
+  .badge-overdue{background:#2a0a0a;color:var(--red)}
+
+  /* INVOICE LIST ITEM */
+  .inv-item{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;cursor:pointer;transition:background .15s}
+  .inv-item:active{background:var(--surface2)}
+  .inv-left .inv-name{font-weight:600;font-size:15px;margin-bottom:4px}
+  .inv-left .inv-meta{font-size:12px;color:var(--muted)}
+  .inv-right{text-align:right}
+  .inv-right .inv-amount{font-weight:700;font-size:16px;margin-bottom:4px}
+
+  /* FORMS */
+  .form-group{margin-bottom:16px}
+  label{display:block;font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+  input,select,textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-size:15px;outline:none;transition:border-color .2s}
+  input:focus,select:focus,textarea:focus{border-color:#555}
+  input::placeholder,textarea::placeholder{color:#444}
+  select option{background:#111}
+  textarea{resize:vertical;min-height:80px}
+  .input-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .btn{width:100%;padding:14px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:opacity .2s;letter-spacing:.3px}
+  .btn:active{opacity:.8}
+  .btn-primary{background:var(--text);color:#000}
+  .btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+  .btn-danger{background:var(--red);color:#fff}
+  .btn-sm{padding:8px 16px;width:auto;font-size:13px;border-radius:8px}
+  .btn-row{display:flex;gap:8px;margin-top:16px}
+  .btn-row .btn{flex:1}
+
+  /* MODAL / DRAWER */
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-end}
+  .overlay.open{display:flex}
+  .drawer{background:var(--surface);border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-height:90vh;overflow-y:auto;animation:slideUp .2s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .drawer-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px}
+  .drawer-title{font-size:18px;font-weight:700;margin-bottom:20px}
+
+  /* DETAIL VIEW */
+  .detail-header{background:var(--surface);border-radius:var(--radius);padding:20px;margin-bottom:12px}
+  .detail-inv-num{font-size:12px;color:var(--muted);letter-spacing:2px;margin-bottom:6px}
+  .detail-client{font-size:20px;font-weight:700;margin-bottom:8px}
+  .detail-amount{font-size:32px;font-weight:800;margin-bottom:8px}
+  .detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .detail-row:last-child{border:none}
+  .detail-key{color:var(--muted)}
+  .back-btn{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:14px;margin-bottom:16px;cursor:pointer;background:none;border:none;padding:0}
+  .back-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* TABS */
+  .tabs{display:flex;gap:4px;background:var(--surface);border-radius:10px;padding:4px;margin-bottom:20px}
+  .tab{flex:1;padding:8px;border:none;background:none;color:var(--muted);font-size:13px;font-weight:600;border-radius:7px;cursor:pointer;transition:all .2s}
+  .tab.active{background:var(--surface2);color:var(--text)}
+
+  /* REPORTS */
+  .report-bar{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:6px 0}
+  .report-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+  .report-month-row{padding:12px 0;border-bottom:1px solid var(--border)}
+  .report-month-row:last-child{border:none}
+
+  /* EMPTY STATE */
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty svg{width:48px;height:48px;stroke:currentColor;fill:none;stroke-width:1.2;margin-bottom:16px;opacity:.4}
+  .empty p{font-size:14px;line-height:1.6}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:calc(var(--nav-h) + 16px);left:50%;transform:translateX(-50%) translateY(20px);background:#222;color:#fff;padding:10px 20px;border-radius:24px;font-size:14px;opacity:0;transition:all .3s;z-index:999;white-space:nowrap}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* DIVIDER */
+  .section-label{font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin:20px 0 10px}
+
+  /* OPEN TRACK DOT */
+  .track-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+
+  /* USAGE PILLS */
+  .pill{display:inline-flex;align-items:center;padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-size:13px;cursor:pointer;transition:all .15s;user-select:none}
+  .pill.active{background:var(--text);color:#000;border-color:var(--text)}
+  .pill:active{opacity:.8}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- PAGES -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header">
+      <div>
+        <div class="brand">Slate</div>
+        <div class="page-title" id="dash-greeting">Good morning</div>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="card">
+        <div class="card-label">Outstanding</div>
+        <div class="card-val" id="stat-outstanding">£0</div>
+        <div class="card-sub" id="stat-outstanding-sub">0 invoices</div>
+      </div>
+      <div class="card">
+        <div class="card-label">This month</div>
+        <div class="card-val" id="stat-month">£0</div>
+        <div class="card-sub">income</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Paid (year)</div>
+        <div class="card-val" id="stat-year">£0</div>
+        <div class="card-sub">total received</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Overdue</div>
+        <div class="card-val" style="color:var(--red)" id="stat-overdue">0</div>
+        <div class="card-sub">need attention</div>
+      </div>
+    </div>
+    <div class="section-label">Recent Invoices</div>
+    <div id="dash-invoices"></div>
+  </div>
+
+  <div class="page" id="page-invoices">
+    <div class="page-header">
+      <div class="page-title">Invoices</div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="filterInvoices('all',this)">All</button>
+      <button class="tab" onclick="filterInvoices('overdue',this)">Overdue</button>
+      <button class="tab" onclick="filterInvoices('sent',this)">Sent</button>
+      <button class="tab" onclick="filterInvoices('paid',this)">Paid</button>
+    </div>
+    <div id="invoice-list"></div>
+  </div>
+
+  <div class="page" id="page-new">
+    <div class="page-header">
+      <div class="page-title">New Invoice</div>
+    </div>
+
+    <!-- Client with inline add -->
+    <div class="form-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label style="margin:0">Client</label>
+        <button onclick="openClientDrawer(true)" style="background:none;border:none;color:#888;font-size:12px;cursor:pointer;padding:0">+ New client</button>
+      </div>
+      <select id="inv-client">
+        <option value="">Select client…</option>
+      </select>
+    </div>
+
+    <!-- Job Description combo -->
+    <div class="form-group">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label style="margin:0">Job Description</label>
+        <span style="font-size:11px;color:#555">Type to add new</span>
+      </div>
+      <input id="inv-job" type="text" list="job-desc-list" placeholder="e.g. Event Photography - Whitechapel" autocomplete="off">
+      <datalist id="job-desc-list"></datalist>
+    </div>
+
+    <div class="input-row">
+      <div class="form-group">
+        <label>Event Date</label>
+        <input id="inv-event-date" type="date">
+      </div>
+      <div class="form-group">
+        <label>Final Delivery</label>
+        <input id="inv-delivery" type="date">
+      </div>
+    </div>
+
+    <!-- Usage pills -->
+    <div class="form-group">
+      <label>Usage</label>
+      <div id="usage-pills" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
+      <input id="inv-usage-custom" type="text" placeholder="Add custom usage…" style="font-size:13px">
+    </div>
+
+    <div class="form-group">
+      <label>Total (£)</label>
+      <input id="inv-total" type="number" placeholder="0" oninput="autoSplit()">
+    </div>
+    <div class="input-row">
+      <div class="form-group">
+        <label>Deposit (£)</label>
+        <input id="inv-deposit" type="number" placeholder="0" oninput="calcFinal()">
+      </div>
+      <div class="form-group">
+        <label>Final Payment (£)</label>
+        <input id="inv-final" type="number" placeholder="0" readonly>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Amount Due Now (£)</label>
+      <input id="inv-due" type="number" placeholder="0">
+    </div>
+    <div class="form-group">
+      <label>Payment Due Date</label>
+      <input id="inv-due-date" type="date">
+    </div>
+    <div class="form-group">
+      <label>Notes (internal)</label>
+      <textarea id="inv-notes" placeholder="Optional…"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="createInvoice()">Create Invoice</button>
+  </div>
+
+  <div class="page" id="page-expenses">
+    <div class="page-header">
+      <div class="page-title">Expenses</div>
+      <button class="btn btn-sm btn-outline" onclick="openExpenseDrawer()">+ Add</button>
+    </div>
+    <div id="expense-list"></div>
+  </div>
+
+  <div class="page" id="page-reports">
+    <div class="page-header">
+      <div class="page-title">Reports</div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchReport('monthly',this)">Monthly</button>
+      <button class="tab" onclick="switchReport('biannual',this)">6-Month</button>
+      <button class="tab" onclick="switchReport('annual',this)">Annual</button>
+    </div>
+    <div id="report-controls"></div>
+    <div id="report-content"></div>
+  </div>
+
+  <!-- Invoice Detail (hidden page) -->
+  <div class="page" id="page-detail">
+    <button class="back-btn" onclick="goBack()">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </button>
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- Clients page -->
+  <div class="page" id="page-clients">
+    <div class="page-header">
+      <div class="page-title">Clients</div>
+      <button class="btn btn-sm btn-outline" onclick="openClientDrawer()">+ Add</button>
+    </div>
+    <div id="client-list"></div>
+  </div>
+
+  <!-- Settings page -->
+  <div class="page" id="page-settings">
+    <div class="page-header">
+      <div class="page-title">Settings</div>
+    </div>
+    <div class="form-group"><label>Business Name</label><input id="set-business" type="text"></div>
+    <div class="form-group"><label>Your Name</label><input id="set-owner" type="text"></div>
+    <div class="form-group"><label>Send From (Email)</label><input id="set-email" type="email"></div>
+    <div class="form-group"><label>Notify Me At</label><input id="set-notify" type="email"></div>
+    <div class="form-group"><label>Phone</label><input id="set-phone" type="text"></div>
+    <div class="form-group"><label>Website</label><input id="set-website" type="text"></div>
+    <div class="section-label">Bank Details</div>
+    <div class="form-group"><label>Account Name</label><input id="set-acname" type="text"></div>
+    <div class="input-row">
+      <div class="form-group"><label>Account Number</label><input id="set-acnum" type="text"></div>
+      <div class="form-group"><label>Sort Code</label><input id="set-sort" type="text"></div>
+    </div>
+    <div class="section-label">Email (SendGrid)</div>
+    <div class="form-group"><label>SendGrid API Key</label><input id="set-sg" type="password" placeholder="SG.xxxxxxxx"></div>
+    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+  </div>
+
+  <!-- NAV -->
+  <nav>
+    <button class="active" onclick="showPage('dashboard',this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Home
+    </button>
+    <button onclick="showPage('invoices',this)">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Invoices
+    </button>
+    <button class="fab" onclick="showPage('new',this)" id="nav-new">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button onclick="showPage('expenses',this)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Expenses
+    </button>
+    <button onclick="showPage('reports',this)">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Reports
+    </button>
+  </nav>
+</div>
+
+<!-- Drawers -->
+<div class="overlay" id="overlay-expense" onclick="closeDrawer('overlay-expense')">
+  <div class="drawer" onclick="event.stopPropagation()">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title">Add Expense</div>
+    <div class="form-group"><label>Description</label><input id="exp-desc" type="text" placeholder="Adobe subscription"></div>
+    <div class="form-group"><label>Amount (£)</label><input id="exp-amount" type="number" placeholder="0"></div>
+    <div class="form-group">
+      <label>Category</label>
+      <select id="exp-cat">
+        <option>Equipment</option><option>Software / Subscriptions</option>
+        <option>Transport</option><option>Marketing</option>
+        <option>Studio / Location</option><option>Professional Services</option>
+        <option>Insurance</option><option>Other</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Date</label><input id="exp-date" type="date"></div>
+    <div class="form-group"><label>Notes</label><input id="exp-notes" type="text" placeholder="Optional"></div>
+    <button class="btn btn-primary" onclick="saveExpense()">Save Expense</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay-client" onclick="closeDrawer('overlay-client')">
+  <div class="drawer" onclick="event.stopPropagation()">
+    <div class="drawer-handle"></div>
+    <div class="drawer-title">Add Client</div>
+    <div class="form-group"><label>Name / Company</label><input id="cl-name" type="text"></div>
+    <div class="form-group"><label>Email</label><input id="cl-email" type="email"></div>
+    <div class="form-group"><label>Address Line 1</label><input id="cl-addr1" type="text"></div>
+    <div class="form-group"><label>City / Postcode</label><input id="cl-addr2" type="text"></div>
+    <button class="btn btn-primary" onclick="saveClient()">Save Client</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+let allInvoices = [], allClients = [], currentFilter = 'all', prevPage = 'dashboard';
+let _clientFromInvoice = false;
+
+const USAGE_OPTIONS = ['Social Media', 'Website', 'Print', 'Editorial', 'Commercial', 'Personal Use'];
+
+// ── Navigation ────────────────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  prevPage = name;
+  if (name === 'dashboard')  loadDashboard();
+  if (name === 'invoices')   loadInvoices();
+  if (name === 'expenses')   loadExpenses();
+  if (name === 'reports')    initReports();
+  if (name === 'clients')    loadClients();
+  if (name === 'settings')   loadSettings();
+  if (name === 'new')        loadNewInvoiceClients();
+}
+
+function goBack() {
+  showPage(prevPage === 'detail' ? 'invoices' : prevPage, null);
+}
+
+function showDetail(inv) {
+  prevPage = 'invoices';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-detail').classList.add('active');
+  renderDetail(inv);
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Drawer ────────────────────────────────────────────────────
+function openExpenseDrawer() {
+  document.getElementById('exp-date').value = toInputDate(todayDDMMYYYY());
+  document.getElementById('overlay-expense').classList.add('open');
+}
+function openClientDrawer(fromInvoice) {
+  _clientFromInvoice = !!fromInvoice;
+  document.getElementById('cl-name').value='';
+  document.getElementById('cl-email').value='';
+  document.getElementById('cl-addr1').value='';
+  document.getElementById('cl-addr2').value='';
+  document.getElementById('overlay-client').classList.add('open');
+}
+function closeDrawer(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ── Date helpers ──────────────────────────────────────────────
+function todayDDMMYYYY() {
+  const d = new Date();
+  return [pad(d.getDate()), pad(d.getMonth()+1), d.getFullYear()].join('/');
+}
+function toInputDate(ddmmyyyy) {
+  const [d,m,y] = ddmmyyyy.split('/');
+  return `${y}-${m}-${d}`;
+}
+function fromInputDate(yyyy_mm_dd) {
+  if (!yyyy_mm_dd) return '';
+  const [y,m,d] = yyyy_mm_dd.split('-');
+  return `${d}/${m}/${y}`;
+}
+function pad(n) { return String(n).padStart(2,'0'); }
+function fmtDate(ddmmyyyy) {
+  if (!ddmmyyyy) return '—';
+  const [d,m,y] = ddmmyyyy.split('/');
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+}
+
+// ── Currency ──────────────────────────────────────────────────
+function fmt(n) {
+  if (!n && n !== 0) return '£0';
+  return '£' + parseFloat(n).toLocaleString('en-GB', {minimumFractionDigits:0, maximumFractionDigits:2});
+}
+
+// ── Badge ─────────────────────────────────────────────────────
+function badge(status) {
+  return `<span class="badge badge-${status}">${status}</span>`;
+}
+
+// ── API helpers ───────────────────────────────────────────────
+async function get(url)        { const r = await fetch(API+url); return r.json(); }
+async function post(url, data) { const r = await fetch(API+url, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); return r.json(); }
+async function put(url, data)  { const r = await fetch(API+url, {method:'PUT', headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); return r.json(); }
+async function del(url)        { const r = await fetch(API+url, {method:'DELETE'}); return r.json(); }
+
+// ── Dashboard ─────────────────────────────────────────────────
+async function loadDashboard() {
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  document.getElementById('dash-greeting').textContent = greet;
+
+  const [invoices, report] = await Promise.all([
+    get('/api/invoices'),
+    get(`/api/reports/monthly/${new Date().getFullYear()}/${new Date().getMonth()+1}`),
+  ]);
+  allInvoices = invoices;
+
+  const outstanding = invoices.filter(i => ['sent','opened','overdue'].includes(i.status));
+  const overdue     = invoices.filter(i => i.status === 'overdue');
+  const yearPaid    = invoices.filter(i => i.status === 'paid' && new Date(i.paid_at||'').getFullYear() === new Date().getFullYear());
+
+  document.getElementById('stat-outstanding').textContent     = fmt(outstanding.reduce((s,i)=>s+i.amount_due,0));
+  document.getElementById('stat-outstanding-sub').textContent = `${outstanding.length} invoice${outstanding.length!==1?'s':''}`;
+  document.getElementById('stat-month').textContent           = fmt(report.income);
+  document.getElementById('stat-year').textContent            = fmt(yearPaid.reduce((s,i)=>s+i.total_amount,0));
+  document.getElementById('stat-overdue').textContent         = overdue.length;
+  if (overdue.length) document.getElementById('stat-overdue').parentElement.style.borderColor='#2a0a0a';
+
+  const el = document.getElementById('dash-invoices');
+  const recent = [...invoices].slice(0,5);
+  el.innerHTML = recent.length ? recent.map(invCard).join('') : '<div class="empty"><p>No invoices yet.<br>Tap + to create your first one.</p></div>';
+}
+
+// ── Invoices ──────────────────────────────────────────────────
+function invCard(inv) {
+  return `<div class="inv-item" onclick="openInvoice(${inv.id})">
+    <div class="inv-left">
+      <div class="inv-name">${inv.client_name}</div>
+      <div class="inv-meta">#${inv.invoice_number} · ${fmtDate(inv.date_created)}</div>
+    </div>
+    <div class="inv-right">
+      <div class="inv-amount">${fmt(inv.amount_due)}</div>
+      ${badge(inv.status)}
+    </div>
+  </div>`;
+}
+
+async function loadInvoices() {
+  allInvoices = await get('/api/invoices');
+  renderInvoiceList();
+}
+
+function filterInvoices(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.tabs .tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderInvoiceList();
+}
+
+function renderInvoiceList() {
+  const filtered = currentFilter === 'all' ? allInvoices :
+    allInvoices.filter(i => i.status === currentFilter ||
+      (currentFilter === 'sent' && i.status === 'opened'));
+  const el = document.getElementById('invoice-list');
+  el.innerHTML = filtered.length ? filtered.map(invCard).join('') :
+    `<div class="empty"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>No ${currentFilter === 'all' ? '' : currentFilter+' '}invoices yet.</p></div>`;
+}
+
+async function openInvoice(id) {
+  const inv = await get(`/api/invoices/${id}`);
+  showDetail(inv);
+}
+
+function renderDetail(inv) {
+  const openedLine = inv.opened_at ?
+    `<span class="track-dot" style="background:var(--green)"></span>Opened ${new Date(inv.opened_at).toLocaleString('en-GB')}` :
+    `<span class="track-dot" style="background:var(--muted)"></span>Not yet opened`;
+
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-header">
+      <div class="detail-inv-num">INVOICE #${inv.invoice_number}</div>
+      <div class="detail-client">${inv.client_name}</div>
+      <div class="detail-amount">${fmt(inv.amount_due)} due</div>
+      ${badge(inv.status)}
+      ${inv.status !== 'draft' ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">${openedLine}</div>` : ''}
+    </div>
+
+    <div class="card">
+      <div class="detail-row"><span class="detail-key">Job</span><span>${inv.job_description}</span></div>
+      <div class="detail-row"><span class="detail-key">Event Date</span><span>${fmtDate(inv.event_date)}</span></div>
+      <div class="detail-row"><span class="detail-key">Usage</span><span>${inv.usage}</span></div>
+      <div class="detail-row"><span class="detail-key">Final Delivery</span><span>${fmtDate(inv.final_delivery_date)}</span></div>
+      <div class="detail-row"><span class="detail-key">Due Date</span><span>${fmtDate(inv.due_date)}</span></div>
+    </div>
+
+    <div class="card">
+      <div class="detail-row"><span class="detail-key">Total</span><span>${fmt(inv.total_amount)}</span></div>
+      <div class="detail-row"><span class="detail-key">Deposit</span><span>${fmt(inv.deposit_amount)}</span></div>
+      <div class="detail-row"><span class="detail-key">Final Payment</span><span>${fmt(inv.final_payment)}</span></div>
+      ${inv.late_fee_applied ? `<div class="detail-row"><span class="detail-key" style="color:var(--red)">Late Fee (10%)</span><span style="color:var(--red)">Applied</span></div>` : ''}
+    </div>
+
+    <div class="btn-row">
+      ${inv.status === 'draft' ? `<button class="btn btn-primary" onclick="sendInvoice(${inv.id})">Send Invoice</button>` : ''}
+      ${['sent','opened','overdue'].includes(inv.status) ? `<button class="btn btn-primary" onclick="markPaid(${inv.id})">Mark as Paid</button>` : ''}
+      <button class="btn btn-outline btn-sm" onclick="downloadPDF(${inv.id})">PDF</button>
+    </div>
+    ${inv.status === 'paid' ? `<p style="color:var(--green);text-align:center;margin-top:12px;font-size:14px">✓ Paid ${inv.paid_at ? new Date(inv.paid_at).toLocaleDateString('en-GB') : ''}</p>` : ''}
+  `;
+}
+
+async function sendInvoice(id) {
+  toast('Sending…');
+  const r = await post(`/api/invoices/${id}/send`, {});
+  toast(r.ok ? 'Invoice sent!' : 'Send failed — check SendGrid settings');
+  if (r.ok) openInvoice(id);
+}
+
+async function markPaid(id) {
+  toast('Marking as paid…');
+  const r = await post(`/api/invoices/${id}/mark-paid`, {});
+  toast(r.ok ? 'Marked as paid — receipt sent' : 'Error');
+  if (r.ok) openInvoice(id);
+}
+
+function downloadPDF(id) {
+  window.open(`/api/invoices/${id}/pdf`, '_blank');
+}
+
+// ── New Invoice ───────────────────────────────────────────────
+async function loadNewInvoiceClients() {
+  [allClients] = await Promise.all([
+    get('/api/clients'),
+    loadJobDescriptions(),
+  ]);
+  const sel = document.getElementById('inv-client');
+  sel.innerHTML = '<option value="">Select client…</option>' +
+    allClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  initUsagePills();
+}
+
+async function loadJobDescriptions() {
+  const descs = await get('/api/job-descriptions');
+  const dl = document.getElementById('job-desc-list');
+  if (dl) dl.innerHTML = descs.map(d => `<option value="${d}">`).join('');
+}
+
+function initUsagePills() {
+  const container = document.getElementById('usage-pills');
+  if (!container) return;
+  container.innerHTML = USAGE_OPTIONS.map(opt => {
+    const active = (opt === 'Social Media' || opt === 'Website') ? ' active' : '';
+    return `<button type="button" class="pill${active}" onclick="toggleUsagePill(this)">${opt}</button>`;
+  }).join('');
+}
+
+function toggleUsagePill(el) {
+  el.classList.toggle('active');
+}
+
+function getUsageValue() {
+  const selected = [...document.querySelectorAll('#usage-pills .pill.active')]
+    .map(p => p.textContent.trim());
+  const custom = (document.getElementById('inv-usage-custom').value || '').trim();
+  if (custom) selected.push(custom);
+  return selected.join(' + ') || 'Social Media + Website';
+}
+
+function autoSplit() {
+  const total = parseFloat(document.getElementById('inv-total').value) || 0;
+  const dep = Math.round(total * 50) / 100;
+  document.getElementById('inv-deposit').value = dep;
+  document.getElementById('inv-final').value = total - dep;
+  document.getElementById('inv-due').value = dep;
+}
+
+function calcFinal() {
+  const total = parseFloat(document.getElementById('inv-total').value) || 0;
+  const dep   = parseFloat(document.getElementById('inv-deposit').value) || 0;
+  document.getElementById('inv-final').value = total - dep;
+}
+
+async function createInvoice() {
+  const clientId = document.getElementById('inv-client').value;
+  if (!clientId) { toast('Please select a client'); return; }
+
+  const jobDesc = document.getElementById('inv-job').value.trim();
+  const data = {
+    client_id:           parseInt(clientId),
+    job_description:     jobDesc,
+    event_date:          fromInputDate(document.getElementById('inv-event-date').value),
+    final_delivery_date: fromInputDate(document.getElementById('inv-delivery').value),
+    usage:               getUsageValue(),
+    total_amount:        parseFloat(document.getElementById('inv-total').value)||0,
+    deposit_amount:      parseFloat(document.getElementById('inv-deposit').value)||0,
+    final_payment:       parseFloat(document.getElementById('inv-final').value)||0,
+    amount_due:          parseFloat(document.getElementById('inv-due').value)||0,
+    due_date:            fromInputDate(document.getElementById('inv-due-date').value),
+    notes:               document.getElementById('inv-notes').value,
+  };
+
+  if (!data.job_description || !data.due_date) { toast('Job description and due date required'); return; }
+
+  // Auto-save new job descriptions to the list
+  const dl = document.getElementById('job-desc-list');
+  const existing = dl ? [...dl.options].map(o => o.value) : [];
+  if (jobDesc && !existing.includes(jobDesc)) {
+    post('/api/job-descriptions', { description: jobDesc }).catch(() => {});
+  }
+
+  toast('Creating…');
+  const inv = await post('/api/invoices', data);
+  if (inv.id) {
+    // Reset form fields
+    document.getElementById('inv-job').value = '';
+    document.getElementById('inv-event-date').value = '';
+    document.getElementById('inv-delivery').value = '';
+    document.getElementById('inv-usage-custom').value = '';
+    document.getElementById('inv-total').value = '';
+    document.getElementById('inv-deposit').value = '';
+    document.getElementById('inv-final').value = '';
+    document.getElementById('inv-due').value = '';
+    document.getElementById('inv-due-date').value = '';
+    document.getElementById('inv-notes').value = '';
+    toast('Invoice created!');
+    showDetail(inv);
+  } else {
+    toast('Error creating invoice');
+  }
+}
+
+// ── Expenses ──────────────────────────────────────────────────
+async function loadExpenses() {
+  const expenses = await get('/api/expenses');
+  const el = document.getElementById('expense-list');
+  if (!expenses.length) {
+    el.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><p>No expenses logged yet.</p></div>';
+    return;
+  }
+  el.innerHTML = expenses.map(e => `
+    <div class="card">
+      <div class="card-row">
+        <div>
+          <div style="font-weight:600">${e.description}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">${e.category} · ${fmtDate(e.date)}</div>
+        </div>
+        <div style="font-size:18px;font-weight:700;color:var(--red)">${fmt(e.amount)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function saveExpense() {
+  const data = {
+    description: document.getElementById('exp-desc').value,
+    amount:      parseFloat(document.getElementById('exp-amount').value)||0,
+    category:    document.getElementById('exp-cat').value,
+    date:        fromInputDate(document.getElementById('exp-date').value),
+    notes:       document.getElementById('exp-notes').value,
+  };
+  if (!data.description || !data.amount) { toast('Description and amount required'); return; }
+  await post('/api/expenses', data);
+  closeDrawer('overlay-expense');
+  toast('Expense saved');
+  document.getElementById('exp-desc').value = '';
+  document.getElementById('exp-amount').value = '';
+  document.getElementById('exp-notes').value = '';
+  loadExpenses();
+}
+
+// ── Clients ───────────────────────────────────────────────────
+async function loadClients() {
+  allClients = await get('/api/clients');
+  const el = document.getElementById('client-list');
+  el.innerHTML = allClients.length ? allClients.map(c => `
+    <div class="card">
+      <div style="font-weight:600;margin-bottom:4px">${c.name}</div>
+      <div style="font-size:13px;color:var(--muted)">${c.email}</div>
+      ${c.address1 ? `<div style="font-size:12px;color:var(--muted);margin-top:2px">${c.address1}${c.city_postcode?', '+c.city_postcode:''}</div>` : ''}
+    </div>
+  `).join('') : '<div class="empty"><p>No clients yet.<br>Add one to get started.</p></div>';
+}
+
+async function saveClient() {
+  const data = {
+    name:          document.getElementById('cl-name').value.trim(),
+    email:         document.getElementById('cl-email').value.trim(),
+    address1:      document.getElementById('cl-addr1').value.trim(),
+    city_postcode: document.getElementById('cl-addr2').value.trim(),
+  };
+  if (!data.name || !data.email) { toast('Name and email required'); return; }
+  const client = await post('/api/clients', data);
+  closeDrawer('overlay-client');
+  toast('Client saved');
+
+  // Refresh client data
+  allClients = await get('/api/clients');
+
+  if (_clientFromInvoice && client.id) {
+    // Re-populate the invoice client dropdown and select the new client
+    const sel = document.getElementById('inv-client');
+    sel.innerHTML = '<option value="">Select client…</option>' +
+      allClients.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    sel.value = client.id;
+    _clientFromInvoice = false;
+  } else {
+    loadClients();
+  }
+}
+
+// ── Reports ───────────────────────────────────────────────────
+let reportMode = 'monthly';
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function switchReport(mode, btn) {
+  reportMode = mode;
+  document.querySelectorAll('.tabs .tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  initReports();
+}
+
+function initReports() {
+  const year = new Date().getFullYear();
+  const month = new Date().getMonth() + 1;
+  const controls = document.getElementById('report-controls');
+
+  if (reportMode === 'monthly') {
+    controls.innerHTML = `
+      <div class="input-row" style="margin-bottom:16px">
+        <div><label>Year</label><input type="number" id="r-year" value="${year}" min="2020" max="2035" onchange="runReport()"></div>
+        <div><label>Month</label><select id="r-month" onchange="runReport()">
+          ${MONTHS.map((m,i)=>`<option value="${i+1}" ${i+1===month?'selected':''}>${m}</option>`).join('')}
+        </select></div>
+      </div>`;
+    runReport();
+  } else if (reportMode === 'biannual') {
+    controls.innerHTML = `
+      <div class="input-row" style="margin-bottom:16px">
+        <div><label>Year</label><input type="number" id="r-year" value="${year}" min="2020" max="2035" onchange="runReport()"></div>
+        <div><label>Half</label><select id="r-half" onchange="runReport()">
+          <option value="1" ${month<=6?'selected':''}>Jan–Jun</option>
+          <option value="2" ${month>6?'selected':''}>Jul–Dec</option>
+        </select></div>
+      </div>`;
+    runReport();
+  } else {
+    controls.innerHTML = `<div class="form-group" style="margin-bottom:16px"><label>Year</label><input type="number" id="r-year" value="${year}" min="2020" max="2035" onchange="runReport()"></div>`;
+    runReport();
+  }
+}
+
+async function runReport() {
+  const year = document.getElementById('r-year').value;
+  let data;
+  if (reportMode === 'monthly') {
+    const month = document.getElementById('r-month').value;
+    data = await get(`/api/reports/monthly/${year}/${month}`);
+    renderMonthlyReport(data);
+  } else if (reportMode === 'biannual') {
+    const half = document.getElementById('r-half').value;
+    data = await get(`/api/reports/biannual/${year}/${half}`);
+    renderMultiMonthReport(data);
+  } else {
+    data = await get(`/api/reports/annual/${year}`);
+    renderMultiMonthReport(data);
+  }
+}
+
+function renderMonthlyReport(data) {
+  const net = data.net;
+  const el = document.getElementById('report-content');
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="card"><div class="card-label">Income</div><div class="card-val" style="color:var(--green)">${fmt(data.income)}</div></div>
+      <div class="card"><div class="card-label">Expenses</div><div class="card-val" style="color:var(--red)">${fmt(data.expenses)}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-label">Net Profit</div>
+      <div class="card-val" style="color:${net>=0?'var(--green)':'var(--red)'}">${fmt(Math.abs(net))}${net<0?' deficit':''}</div>
+    </div>`;
+}
+
+function renderMultiMonthReport(data) {
+  const maxVal = Math.max(...data.monthly.map(m=>Math.max(m.income,m.expenses)),1);
+  const el = document.getElementById('report-content');
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="card"><div class="card-label">Total Income</div><div class="card-val" style="color:var(--green)">${fmt(data.total_income)}</div></div>
+      <div class="card"><div class="card-label">Total Expenses</div><div class="card-val" style="color:var(--red)">${fmt(data.total_expenses)}</div></div>
+    </div>
+    <div class="card"><div class="card-label">Net</div><div class="card-val" style="color:${data.total_net>=0?'var(--green)':'var(--red)'}">${fmt(Math.abs(data.total_net))}</div></div>
+    <div class="section-label">Monthly Breakdown</div>
+    <div class="card">
+      ${data.monthly.map(m => `
+        <div class="report-month-row">
+          <div class="card-row" style="margin-bottom:4px">
+            <span style="font-weight:600">${MONTHS[m.month-1]}</span>
+            <span style="font-size:13px;color:${m.net>=0?'var(--green)':'var(--red)'}">${fmt(m.net)}</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">In: ${fmt(m.income)} · Out: ${fmt(m.expenses)}</div>
+          ${m.income>0?`<div class="report-bar"><div class="report-bar-fill" style="width:${m.income/maxVal*100}%;background:var(--green)"></div></div>`:''}
+          ${m.expenses>0?`<div class="report-bar"><div class="report-bar-fill" style="width:${m.expenses/maxVal*100}%;background:var(--red)"></div></div>`:''}
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+// ── Settings ──────────────────────────────────────────────────
+async function loadSettings() {
+  const s = await get('/api/settings');
+  document.getElementById('set-business').value = s.business_name||'';
+  document.getElementById('set-owner').value    = s.owner_name||'';
+  document.getElementById('set-email').value    = s.email||'';
+  document.getElementById('set-notify').value   = s.notify_email||'';
+  document.getElementById('set-phone').value    = s.phone||'';
+  document.getElementById('set-website').value  = s.website||'';
+  document.getElementById('set-acname').value   = s.account_name||'';
+  document.getElementById('set-acnum').value    = s.account_number||'';
+  document.getElementById('set-sort').value     = s.sort_code||'';
+  document.getElementById('set-sg').value       = s.sendgrid_api_key||'';
+}
+
+async function saveSettings() {
+  const data = {
+    business_name:    document.getElementById('set-business').value,
+    owner_name:       document.getElementById('set-owner').value,
+    email:            document.getElementById('set-email').value,
+    notify_email:     document.getElementById('set-notify').value,
+    phone:            document.getElementById('set-phone').value,
+    website:          document.getElementById('set-website').value,
+    account_name:     document.getElementById('set-acname').value,
+    account_number:   document.getElementById('set-acnum').value,
+    sort_code:        document.getElementById('set-sort').value,
+    sendgrid_api_key: document.getElementById('set-sg').value,
+  };
+  await put('/api/settings', data);
+  toast('Settings saved');
+}
+
+// ── Init ──────────────────────────────────────────────────────
+// Swipe on nav for clients/settings
+document.addEventListener('DOMContentLoaded', () => {
+  loadDashboard();
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/sw.js').catch(()=>{});
+  }
+  // Long-press nav for extra pages
+  let pressTimer;
+  document.querySelector('nav').addEventListener('contextmenu', e => e.preventDefault());
+});
+
+// Expose clients & settings via small header icons (we add them dynamically)
+// Users can access via right-swipe gesture or settings icon in dashboard header
+document.querySelector('.page-header').insertAdjacentHTML('beforeend',
+  `<div style="display:flex;gap:12px">
+    <button onclick="showPage('clients',this)" style="background:none;border:none;color:var(--muted);cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </button>
+    <button onclick="showPage('settings',this)" style="background:none;border:none;color:var(--muted);cursor:pointer">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </div>`
+);
+</script>
+</body>
+</html>
